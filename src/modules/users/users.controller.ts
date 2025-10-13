@@ -36,7 +36,11 @@ export class UsersController {
   @HttpCode(HttpStatus.OK)
   async requestForgotPassword(@Body() body: RequestForgotPasswordDto) {
     await this.usersService.requestForgotPassword(body.email);
-    return { message: 'If the email exists, a reset link has been sent.' };
+    return {
+      message: 'If the email exists, a reset link has been sent.',
+      status: 'success',
+      code: 200,
+    };
   }
 
   @Post('reset-password')

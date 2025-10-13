@@ -117,7 +117,7 @@ model Card {
   id              Int     @id @default(autoincrement())
   title           String
   description     String?
-  content         String?
+  content         Json?
   page            String
   numericalOrder  Int     @default(0)
   icon            String?
@@ -127,6 +127,8 @@ model Card {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  metaData MetaData? @relation(fields: [page], references: [page])
+
   @@map("cards")
 }
 
@@ -135,11 +137,12 @@ model MetaData {
   title       String
   description String?
   backgroundImage String
-  page            String
-
+  page            String @unique
+  backgroundColor String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   
+  cards Card[]
 
   @@map("meta_data")
 }

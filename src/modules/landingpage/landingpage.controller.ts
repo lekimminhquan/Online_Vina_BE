@@ -6,17 +6,29 @@ import { contentPageDto } from "./dto/content";
 export class LandingpageController {
   constructor(private readonly landingpageService: LandingpageService) {}
 
+  @Get('/all')
+  @HttpCode(HttpStatus.OK)
+  async getAllCardsWithMetadata() {
+    return this.landingpageService.getDataAllLandingPage();
+  }
+
+  
   @Get(':page')
   @HttpCode(HttpStatus.OK)
   async getLandingPageContent(@Param('page') page: string) {
     return this.landingpageService.getLandingPageContent(page);
   }
 
+
+
   @Post('/update/:page')
   @HttpCode(HttpStatus.OK)
   async createAndUpdateContentLandingPage(@Body() body: contentPageDto, @Param('page') page: string) {
     return this.landingpageService.createAndUpdateContentLandingPage(body, page);
   }
+
+
+
 
 
   // @Put('/change')

@@ -43,6 +43,7 @@ export class AppModule implements NestModule {
         { path: 'users/welcome', method: RequestMethod.POST },
         { path: 'landingpage', method: RequestMethod.GET },
         { path: 'landingpage/(.*)', method: RequestMethod.GET },
+        { path: 'landingpage/all', method: RequestMethod.GET },
         { path: 'landingpage/update/(.*)', method: RequestMethod.POST },
       )
       .forRoutes('*');

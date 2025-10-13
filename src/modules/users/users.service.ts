@@ -21,7 +21,7 @@ export class UsersService {
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
     private readonly emailsService: EmailsService,
-  ) {}
+  ) { }
 
   async requestForgotPassword(email: string): Promise<void> {
     const user = await this.prisma.user.findFirst({ where: { email } });
@@ -40,7 +40,82 @@ export class UsersService {
       to: user ? email : (process.env.MAIL_DEV_REDIRECT ?? email),
       subject: 'Reset your password',
       text: `Click the link to reset your password (valid 12h): ${resetLink}`,
-      html: `<p>Click the link to reset your password (valid 12h):</p><p><a href="${resetLink}">${resetLink}</a></p>`,
+      html: `<!doctype html>
+                  <html>
+                    <head>
+                      <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+                      <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+                      <title>Reset your password</title>
+                      <style>
+                        /* Base */
+                        body { margin: 0; padding: 0; background-color: #0b1220; color: #e6eaf2; }
+                        a { color: #4f8cff; text-decoration: none; }
+                        img { border: none; -ms-interpolation-mode: bicubic; max-width: 100%; }
+                        table { border-collapse: separate; width: 100%; }
+                        .container { width: 100%; background-color: #0b1220; padding: 24px 0; }
+                        .content { max-width: 560px; margin: 0 auto; background: #0f172a; border: 1px solid #1f2a44; border-radius: 14px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.35); }
+                        .header { padding: 24px; border-bottom: 1px solid #1f2a44; display: flex; align-items: center; gap: 12px; }
+                        .brand { font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji"; font-size: 16px; color: #e6eaf2; letter-spacing: .2px; }
+                        .badge { font-size: 11px; color: #aab3c5; background: #121a30; border: 1px solid #26324f; padding: 4px 8px; border-radius: 999px; }
+                        .body { padding: 28px 24px; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji"; }
+                        h1 { margin: 0 0 12px; font-size: 20px; line-height: 1.3; color: #f3f6fc; }
+                        p { margin: 0 0 14px; font-size: 14px; color: #c9d3e0; }
+                        .cta { text-align: center; margin: 26px 0; }
+                        .btn { display: inline-block; background: linear-gradient(135deg,#5b8cff,#8a7bff); color: #0b1220 !important; font-weight: 700; padding: 12px 18px; border-radius: 12px; border: 0; text-decoration: none; box-shadow: 0 6px 18px rgba(79,140,255,0.35); }
+                        .btn:hover { filter: brightness(1.05); }
+                        .muted { font-size: 12px; color: #9aa6bd; }
+                        .hr { height: 1px; background: linear-gradient(90deg, rgba(38,50,79,0), #26324f, rgba(38,50,79,0)); border: 0; margin: 24px 0; }
+                        .footer { padding: 20px 24px; text-align: center; color: #8b95a9; font-size: 12px; }
+                        @media only screen and (max-width: 600px) { .body { padding: 22px 18px; } .header { padding: 18px; } }
+                        @media (prefers-color-scheme: light) {
+                          body { background: #f6f7fb; color: #0b1220; }
+                          .container { background: #f6f7fb; }
+                          .content { background: #ffffff; border-color: #e5e7ef; }
+                          .header { border-color: #eef0f6; }
+                          .brand { color: #0b1220; }
+                          .badge { background: #f3f6fc; color: #334155; border-color: #e5e7ef; }
+                          h1 { color: #0b1220; }
+                          p { color: #364153; }
+                          .muted { color: #5b6476; }
+                        }
+                      </style>
+                    </head>
+                    <body>
+                      <div style="display:none;visibility:hidden;opacity:0;color:transparent;height:0;width:0;overflow:hidden;mso-hide:all">Reset your password (link valid for 12 hours)</div>
+                      <div class="container">
+                        <table role="presentation" class="content" cellpadding="0" cellspacing="0">
+                          <tr>
+                            <td class="header">
+                              <div class="brand" style="font-size: 18px; color: #e6eaf2; letter-spacing: .2px; font-weight: 600;">Online Vina</div>
+                              <span class="badge" style="margin-left: 10px;" >Security notice</span>
+                            </td>
+                          </tr>
+                          <tr>
+                            <td class="body">
+                              <h1>Reset your password</h1>
+                              <p>We received a request to reset the password for your account.</p>
+                              <p>This link will be valid for 12 hours. If you did not request a password reset, you can safely ignore this email.</p>
+                              <div class="cta">
+                                <a class="btn" href="${resetLink}" target="_blank" rel="noopener">Reset password</a>
+                              </div>
+                              <hr class="hr" />
+                              <p class="muted">Or copy and paste this link into your browser:</p>
+                              <p class="muted"><a href="${resetLink}" target="_blank" rel="noopener">${resetLink}</a></p>
+                            </td>
+                          </tr>
+                          <tr>
+                            <td class="footer">
+                              <div>
+                                <span class="badge" style="display:inline-block;margin-bottom:8px;">© 2025 MoveOnThings Technology</span>
+                                <p style="margin:0 0 10px;">All rights reserved.</p>
+                              </div>
+                              <div class="muted">You are receiving this email because a password reset was requested for this address.</div>
+                            </td>
+                          </tr>
+                        </table>
+                      </div>
+                    </body>
+                  </html> `,
     });
   }
 

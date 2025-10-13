@@ -5,12 +5,12 @@ export class metaDataDto {
     id?: number;
     @IsNotEmpty()
     backgroundImage: string;
-    @IsNotEmpty()
-    page: string;
+    page?: string;
     @IsNotEmpty()
     title: string;
     @IsNotEmpty()
     description: string;
+    backgroundColor?: string;
 }
 export class selectCardDto {
     id?: number;
@@ -20,10 +20,9 @@ export class selectCardDto {
     description: string;
     @IsNotEmpty()
     icon: string;
+    page?: string;
     @IsNotEmpty()
-    page: string;
-    @IsNotEmpty()
-    content: string;
+    content: string | string[];
     @IsNotEmpty()
     image: string;
     backgroundColor: string;
@@ -31,8 +30,6 @@ export class selectCardDto {
 }
 
 export class contentPageDto {
-    @IsNotEmpty()
-    page: string;
     @IsNotEmpty()
     metadata: metaDataDto;
     @IsNotEmpty()
