@@ -40,19 +40,19 @@ import { LandingpageModule } from './modules/landingpage/landingpage.module.js';
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
-    // consumer
-    //   .apply(AuthMiddleware)
-    //   .exclude(
-    //     { path: 'users/login', method: RequestMethod.POST },
-    //     { path: 'users/register', method: RequestMethod.POST },
-    //     { path: 'users/request-forgot-password', method: RequestMethod.POST },
-    //     { path: 'users/reset-password', method: RequestMethod.POST },
-    //     { path: 'users/refresh-token', method: RequestMethod.POST },
-    //     { path: 'users/welcome', method: RequestMethod.POST },
-    //     { path: 'landingpage', method: RequestMethod.GET },
-    //     { path: 'landingpage/(.*)', method: RequestMethod.GET },
-    //     { path: 'landingpage/update/(.*)', method: RequestMethod.POST },
-    //   )
-    //   .forRoutes('*');
+    consumer
+      .apply(AuthMiddleware)
+      .exclude(
+        { path: 'users/login', method: RequestMethod.POST },
+        { path: 'users/register', method: RequestMethod.POST },
+        { path: 'users/request-forgot-password', method: RequestMethod.POST },
+        { path: 'users/reset-password', method: RequestMethod.POST },
+        { path: 'users/refresh-token', method: RequestMethod.POST },
+        { path: 'users/welcome', method: RequestMethod.POST },
+        { path: 'landingpage', method: RequestMethod.GET },
+        { path: 'landingpage/(.*)', method: RequestMethod.GET },
+        { path: 'landingpage/update/(.*)', method: RequestMethod.POST },
+      )
+      .forRoutes('*');
   }
 }
