@@ -6,6 +6,7 @@ import { EmailsModule } from './modules/emails/emails.module.js';
 import { CloudinaryModule } from './modules/cloudinary/cloudinary.module.js';
 import { ProductsModule } from './modules/products/products.module.js';
 import { CategoriesModule } from './modules/categories/categories.module.js';
+import { OrdersModule } from './modules/orders/orders.module.js';
 import { UploadsModule } from './modules/uploads/uploads.module.js';
 import { AuthMiddleware } from './modules/users/middleware/auth.middleware.js';
 import {
@@ -34,6 +35,7 @@ import { LandingpageModule } from './modules/landingpage/landingpage.module.js';
     CloudinaryModule,
     ProductsModule,
     CategoriesModule,
+    OrdersModule,
     UploadsModule,
   ],
   providers: [AuthMiddleware],
