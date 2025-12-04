@@ -3,83 +3,106 @@ import { PrismaService } from '../prisma/prisma.service.js';
 import { Prisma } from '@prisma/client';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { Decimal } from '@prisma/client/runtime/library';
+import { CreateVoucherDto } from './dto/create-voucher.dto';
 
 @Injectable()
 export class OrdersService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async createOrder(dto: CreateOrderDto) {
+  async createOrder(dto: CreateOrderDto, userId: string) {
     // Validate user exists
     const user = await this.prisma.user.findUnique({
-      where: { id: dto.userId },
+      where: { id: userId },
     });
     if (!user) {
       throw new NotFoundException('User không tồn tại');
     }
 
-    // Fetch all products and validate they exist
-    const productIds = dto.products.map((p) => p.id);
-    const products = await this.prisma.product.findMany({
+    // Fetch all product variants and validate they exist
+    const variantIds = dto.products.map((p) => p.id);
+    const variants = await this.prisma.productVariant.findMany({
       where: {
-        id: { in: productIds },
-        // dùng any vì prisma client có thể chưa update field deletedAt
-        ...({ deletedAt: null } as any),
+        id: { in: variantIds },
+        deletedAt: null,
       },
     });
 
-    if (products.length !== productIds.length) {
-      throw new NotFoundException('Một hoặc nhiều sản phẩm không tồn tại');
+    if (variants.length !== variantIds.length) {
+      throw new NotFoundException(
+        'Một hoặc nhiều product variant không tồn tại',
+      );
     }
 
     // Create a map for quick lookup
-    const productMap = new Map(products.map((p) => [p.id, p]));
+    const variantMap = new Map(variants.map((v) => [v.id, v]));
 
     // Calculate total price and prepare orderToProducts data
     let totalPrice = new Decimal(0);
     const orderToProductsData = dto.products.map((orderProduct) => {
-      const product = productMap.get(orderProduct.id);
-      if (!product) {
+      const variant = variantMap.get(orderProduct.id);
+      if (!variant) {
         throw new NotFoundException(
-          `Sản phẩm với id ${orderProduct.id} không tồn tại`,
+          `Product variant với id ${orderProduct.id} không tồn tại`,
         );
       }
 
-      // Use priceNew if available, otherwise use priceOld
-      const price =
-        (product as any).priceNew ??
-        (product as any).priceOld ??
-        new Decimal(0);
+      // Giá lấy trực tiếp từ product variant
+      const price = (variant as any).price ?? new Decimal(0);
       const itemTotal = price.mul(orderProduct.quantity);
       totalPrice = totalPrice.add(itemTotal);
 
       return {
-        productId: orderProduct.id,
+        productVariantId: orderProduct.id,
         quantity: orderProduct.quantity,
-        price: price,
+        price: price, // đơn giá
+        productId: variant.productId,
       };
     });
 
     // Calculate tax (10% = 0.1)
     const tax = new Decimal(0.1);
 
-    // Create order with orderToProducts in a transaction
+    // Apply voucher discount if provided
+    let discountAmount = new Decimal(0);
+    let voucher: any = null;
+    if (dto.voucherCode) {
+      voucher = await (this.prisma as any).voucher.findUnique({
+        where: { code: dto.voucherCode },
+      });
+
+      if (!voucher) {
+        throw new NotFoundException('Voucher không tồn tại');
+      }
+
+      const voucherAmount = new Decimal(voucher.amount);
+      // Không cho giảm quá tổng tiền
+      discountAmount = voucherAmount.greaterThan(totalPrice)
+        ? totalPrice
+        : voucherAmount;
+      totalPrice = totalPrice.sub(discountAmount);
+    }
+
+    // Create order with orderToProducts (and voucher) in a transaction
     const order = await this.prisma.$transaction(async (tx) => {
       const newOrder = await (tx as any).order.create({
         data: {
-          userId: dto.userId,
+          userId: userId,
           totalPrice: totalPrice,
           tax: tax,
+          voucherCode: dto.voucherCode ?? null,
           orderToProducts: {
             create: orderToProductsData,
           },
-        },
-        include: {
-          user: true,
-          orderToProducts: {
-            include: {
-              product: true,
-            },
-          },
+          orderVouchers:
+            voucher !== null
+              ? {
+                  create: [
+                    {
+                      voucherId: voucher.id,
+                    },
+                  ],
+                }
+              : undefined,
         },
       });
 
@@ -140,10 +163,43 @@ export class OrdersService {
       (this.prisma as any).order.findMany({
         where,
         include: {
-          user: true,
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              avatar: true,
+            },
+          },
           orderToProducts: {
             include: {
-              product: true,
+              productVariant: {
+                select: {
+                  id: true,
+                  label: true,
+                  value: true,
+                },
+              },
+              product: {
+                select: {
+                  id: true,
+                  code: true,
+                  name: true,
+                  images: true,
+                  unit: true,
+                  category: {
+                    select: {
+                      id: true,
+                      name: true,
+                    },
+                  },
+                },
+              },
+            },
+          },
+          orderVouchers: {
+            include: {
+              voucher: true,
             },
           },
         },
@@ -165,10 +221,43 @@ export class OrdersService {
     const order = await (this.prisma as any).order.findUnique({
       where: { id },
       include: {
-        user: true,
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            avatar: true,
+          },
+        },
         orderToProducts: {
           include: {
-            product: true,
+            productVariant: {
+              select: {
+                id: true,
+                label: true,
+                value: true,
+              },
+            },
+            product: {
+              select: {
+                id: true,
+                code: true,
+                name: true,
+                images: true,
+                unit: true,
+                category: {
+                  select: {
+                    id: true,
+                    name: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+        orderVouchers: {
+          include: {
+            voucher: true,
           },
         },
       },
@@ -196,5 +285,25 @@ export class OrdersService {
         deletedAt: new Date(),
       } as any,
     });
+  }
+
+  async createVoucher(dto: CreateVoucherDto) {
+    const exists = await (this.prisma as any).voucher.findUnique({
+      where: { code: dto.code },
+    });
+
+    if (exists) {
+      throw new NotFoundException('Voucher với mã này đã tồn tại');
+    }
+
+    const voucher = await (this.prisma as any).voucher.create({
+      data: {
+        code: dto.code,
+        amount: dto.amount,
+        description: dto.description ?? null,
+      },
+    });
+
+    return voucher;
   }
 }

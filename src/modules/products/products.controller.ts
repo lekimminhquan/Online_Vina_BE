@@ -17,14 +17,17 @@ import {
   ApiBody,
   ApiQuery,
   ApiParam,
+  ApiBearerAuth,
 } from '@nestjs/swagger';
 import { ProductsService } from './products.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { ProductListQueryDto } from './dto/product-list-query.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
+import { UpdateProductVariantsDto } from './dto/update-product-variants.dto';
 import type { Product } from '@prisma/client';
 import { ListPaginatedResponse } from '../../utils/types/list-api';
 
+@ApiBearerAuth('access-token')
 @ApiTags('Products')
 @Controller('products')
 export class ProductsController {
@@ -133,6 +136,34 @@ export class ProductsController {
     await this.productsService.deleteProduct(numericId);
     return {
       message: 'Xóa sản phẩm thành công',
+    };
+  }
+
+  @Put('variants')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Cập nhật danh sách variants của sản phẩm' })
+  @ApiBody({ type: UpdateProductVariantsDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Cập nhật variants của sản phẩm thành công',
+    schema: {
+      type: 'object',
+      properties: {
+        message: {
+          type: 'string',
+          example: 'Cập nhật variants của sản phẩm thành công',
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Sản phẩm không tồn tại',
+  })
+  async updateVariants(@Body() body: UpdateProductVariantsDto) {
+    await this.productsService.updateProductVariants(body);
+    return {
+      message: 'Cập nhật variants của sản phẩm thành công',
     };
   }
 

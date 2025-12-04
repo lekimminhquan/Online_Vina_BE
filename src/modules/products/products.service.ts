@@ -1,35 +1,54 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { Prisma, type Product } from '@prisma/client';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
+import { UpdateProductVariantsDto } from './dto/update-product-variants.dto';
 
 @Injectable()
 export class ProductsService {
   constructor(private readonly prisma: PrismaService) {}
 
   async createProduct(dto: CreateProductDto): Promise<Product> {
-    const category = await this.prisma.category.findUnique({
-      where: { id: dto.categoryId },
-    });
-    if (!category) {
-      throw new NotFoundException('Category không tồn tại');
+    if (!dto.variants || dto.variants.length === 0) {
+      throw new BadRequestException(
+        'Sản phẩm phải có ít nhất một biến thể (variant)',
+      );
     }
 
-    const product = await this.prisma.product.create({
-      data: {
-        name: dto.name,
-        code: await this.generateProductCode(),
-        priceOld: dto.priceOld,
-        priceNew: dto.priceNew,
-        images: dto.images,
-        unit: dto.unit,
-        categoryId: dto.categoryId,
-        sizes: dto.sizes,
-      },
-    });
+    return this.prisma.$transaction(async (tx: any) => {
+      const category = await tx.category.findUnique({
+        where: { id: dto.categoryId },
+      });
+      if (!category) {
+        throw new NotFoundException('Category không tồn tại');
+      }
 
-    return product;
+      const product = await tx.product.create({
+        data: {
+          name: dto.name,
+          code: await this.generateProductCode(),
+          images: dto.images,
+          unit: dto.unit,
+          categoryId: dto.categoryId,
+        },
+      });
+
+      await tx.productVariant.createMany({
+        data: dto.variants.map((variant) => ({
+          productId: product.id,
+          label: 'size',
+          value: variant.value,
+          price: variant.price,
+        })),
+      });
+
+      return product;
+    });
   }
 
   async listProducts(params?: {
@@ -86,6 +105,13 @@ export class ProductsService {
         orderBy: { id: 'desc' },
         skip,
         take: pageSize,
+        include: {
+          variants: {
+            where: {
+              deletedAt: null,
+            },
+          } as any,
+        } as any,
       }),
     ]);
 
@@ -113,32 +139,115 @@ export class ProductsService {
   }
 
   async updateProduct(id: number, dto: UpdateProductDto): Promise<Product> {
-    const existing = await this.prisma.product.findUnique({ where: { id } });
-    if (!existing || (existing as any).deletedAt) {
-      throw new NotFoundException('Sản phẩm không tồn tại');
-    }
+    return this.prisma.$transaction(async (tx: any) => {
+      const existing = await tx.product.findUnique({ where: { id } });
+      if (!existing || (existing as any).deletedAt) {
+        throw new NotFoundException('Sản phẩm không tồn tại');
+      }
 
-    const category = await this.prisma.category.findUnique({
-      where: { id: dto.categoryId },
+      if (typeof dto.categoryId !== 'undefined') {
+        const category = await tx.category.findUnique({
+          where: { id: dto.categoryId },
+        });
+        if (!category) {
+          throw new NotFoundException('Category không tồn tại');
+        }
+      }
+
+      const updated = await tx.product.update({
+        where: { id },
+        data: {
+          name: dto.name ?? existing.name,
+          images: dto.images ?? existing.images,
+          unit: dto.unit ?? existing.unit,
+          categoryId:
+            typeof dto.categoryId !== 'undefined'
+              ? dto.categoryId
+              : existing.categoryId,
+        },
+      });
+      return updated;
     });
-    if (!category) {
-      throw new NotFoundException('Category không tồn tại');
-    }
+  }
 
-    const updated = await this.prisma.product.update({
-      where: { id },
-      data: {
-        name: dto.name,
-        priceOld: dto.priceOld,
-        priceNew: dto.priceNew,
-        images: dto.images,
-        unit: dto.unit,
-        categoryId: dto.categoryId,
-        sizes: dto.sizes,
-      },
+  async updateProductVariants(dto: UpdateProductVariantsDto): Promise<void> {
+    await this.prisma.$transaction(async (tx: any) => {
+      const product = await tx.product.findUnique({
+        where: { id: dto.productId },
+        include: {
+          variants: {
+            where: {
+              deletedAt: null,
+            },
+          } as any,
+        } as any,
+      });
+
+      if (!product || (product as any).deletedAt) {
+        throw new NotFoundException('Sản phẩm không tồn tại');
+      }
+
+      if (!dto.variants || dto.variants.length === 0) {
+        throw new BadRequestException(
+          'Sản phẩm phải có ít nhất một biến thể (variant)',
+        );
+      }
+
+      const existingVariants = (product as any).variants as {
+        id: number;
+        value: string;
+      }[];
+      const payloadIds = dto.variants
+        .map((v) => v.id)
+        .filter((id): id is number => typeof id === 'number');
+
+      // Soft delete các variants không còn trong payload
+      const idsToDelete = existingVariants
+        .map((v) => v.id)
+        .filter((id) => !payloadIds.includes(id));
+
+      if (idsToDelete.length > 0) {
+        await tx.productVariant.updateMany({
+          where: { id: { in: idsToDelete } },
+          data: {
+            deletedAt: new Date(),
+          },
+        });
+      }
+
+      // Update các variants có id
+      const variantsToUpdate = dto.variants.filter(
+        (variant) => typeof variant.id === 'number',
+      );
+      for (const variant of variantsToUpdate) {
+        await tx.productVariant.update({
+          where: { id: variant.id },
+          data: {
+            value: variant.value,
+            price: variant.price,
+          },
+        });
+      }
+
+      // Tạo mới các variants không có id
+      const existingValues = existingVariants.map((v) => v.value);
+
+      const variantsToCreate = dto.variants.filter(
+        (variant) =>
+          typeof variant.id !== 'number' &&
+          !existingValues.includes(variant.value),
+      );
+      if (variantsToCreate.length > 0) {
+        await tx.productVariant.createMany({
+          data: variantsToCreate.map((variant) => ({
+            productId: dto.productId,
+            label: 'size',
+            value: variant.value,
+            price: variant.price,
+          })),
+        });
+      }
     });
-
-    return updated;
   }
 
   private async generateProductCode(): Promise<string> {
