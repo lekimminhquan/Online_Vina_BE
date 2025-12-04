@@ -8,6 +8,7 @@ import {
   HttpStatus,
   Post,
   Query,
+  Req,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -16,11 +17,16 @@ import {
   ApiBody,
   ApiQuery,
   ApiParam,
+  ApiBearerAuth,
 } from '@nestjs/swagger';
 import { OrdersService } from './orders.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { OrderListQueryDto } from './dto/order-list-query.dto';
+import { CurrentUser } from '../users/decorators/current-user.decorator';
+import type { User } from '@prisma/client';
+import { CreateVoucherDto } from './dto/create-voucher.dto';
 
+@ApiBearerAuth('access-token')
 @ApiTags('Orders')
 @Controller('orders')
 export class OrdersController {
@@ -48,8 +54,8 @@ export class OrdersController {
     status: 404,
     description: 'User hoặc Product không tồn tại',
   })
-  async create(@Body() body: CreateOrderDto) {
-    const order = await this.ordersService.createOrder(body);
+  async create(@Body() body: CreateOrderDto, @CurrentUser() user: User) {
+    const order = await this.ordersService.createOrder(body, user.id as string);
     return {
       message: 'Tạo đơn hàng thành công',
       data: order,
@@ -167,6 +173,29 @@ export class OrdersController {
     await this.ordersService.deleteOrder(numericId);
     return {
       message: 'Xóa đơn hàng thành công',
+    };
+  }
+
+  @Post('vouchers')
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Tạo voucher mới' })
+  @ApiBody({ type: CreateVoucherDto })
+  @ApiResponse({
+    status: 201,
+    description: 'Tạo voucher thành công',
+    schema: {
+      type: 'object',
+      properties: {
+        message: { type: 'string', example: 'Tạo voucher thành công' },
+        data: { type: 'object', description: 'Thông tin voucher đã tạo' },
+      },
+    },
+  })
+  async createVoucher(@Body() body: CreateVoucherDto) {
+    const voucher = await this.ordersService.createVoucher(body);
+    return {
+      message: 'Tạo voucher thành công',
+      data: voucher,
     };
   }
 }

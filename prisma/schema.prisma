@@ -33,15 +33,13 @@ model Product {
   id          Int                      @id @default(autoincrement())
   code        String                   @unique
   name        String
-  priceOld    Decimal?
-  priceNew    Decimal?
   images      String[]
   unit        String
   categoryId  Int?
   inventories Inventory[]
   category    Category?                @relation(fields: [categoryId], references: [id])
   details     StockTransactionDetail[]
-  sizes       String[]
+  variants    ProductVariant[]
 
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
@@ -116,6 +114,8 @@ enum UserType {
   admin
   client
   collaborator
+  coffeeSeller
+  coffeeAdmin
 }
 
 enum TransactionType {
@@ -163,18 +163,61 @@ model Order {
   totalPrice      Decimal
   orderToProducts OrderToProduct[]
   tax             Decimal
+  voucherCode     String?
+  orderVouchers   OrderVoucher[]
 
   @@map("orders")
 }
 
 model OrderToProduct {
-  id        String  @id @default(uuid()) @db.Uuid
-  orderId   Int     @db.Integer
-  productId Int     @db.Integer
-  quantity  Int
-  price     Decimal
-  order     Order   @relation(fields: [orderId], references: [id])
-  product   Product @relation(fields: [productId], references: [id])
+  id               String         @id @default(uuid()) @db.Uuid
+  orderId          Int            @db.Integer
+  productVariantId Int            @db.Integer
+  quantity         Int
+  price            Decimal
+  order            Order          @relation(fields: [orderId], references: [id])
+  productVariant   ProductVariant @relation(fields: [productVariantId], references: [id])
+  product          Product?       @relation(fields: [productId], references: [id])
+  productId        Int?
 
   @@map("order_to_products")
+}
+
+model Voucher {
+  id          Int     @id @default(autoincrement())
+  code        String  @unique
+  amount      Decimal
+  description String?
+
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+  orders    OrderVoucher[]
+
+  @@map("vouchers")
+}
+
+model OrderVoucher {
+  id        Int @id @default(autoincrement())
+  orderId   Int
+  voucherId Int
+
+  order   Order   @relation(fields: [orderId], references: [id])
+  voucher Voucher @relation(fields: [voucherId], references: [id])
+
+  @@unique([orderId, voucherId])
+  @@map("order_vouchers")
+}
+
+model ProductVariant {
+  id        Int       @id @default(autoincrement())
+  productId Int
+  label     String    @default("size")
+  value     String
+  price     Decimal
+  deletedAt DateTime?
+
+  product         Product          @relation(fields: [productId], references: [id])
+  orderToProducts OrderToProduct[]
+
+  @@map("product_variants")
 }
