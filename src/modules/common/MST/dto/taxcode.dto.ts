@@ -1,6 +1,11 @@
-import { IsNotEmpty } from "class-validator";
+import { IsNotEmpty } from 'class-validator';
+import { ApiProperty } from '@nestjs/swagger';
 
 export class GetTaxCodeInfoDto {
-    @IsNotEmpty()
-    mst!: string;
+  @ApiProperty({
+    description: 'Mã số thuế',
+    example: '0123456789',
+  })
+  @IsNotEmpty()
+  mst!: string;
 }
