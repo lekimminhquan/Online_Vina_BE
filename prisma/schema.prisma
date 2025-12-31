@@ -16,6 +16,7 @@ model User {
   email         String         @db.VarChar(255)
   disabled      Boolean        @default(false)
   refreshTokens RefreshToken[]
+  orders        Order[]
 
   @@map("users")
 }
@@ -32,11 +33,18 @@ model Product {
   id          Int                      @id @default(autoincrement())
   code        String                   @unique
   name        String
+  images      String[]
   unit        String
   categoryId  Int?
   inventories Inventory[]
   category    Category?                @relation(fields: [categoryId], references: [id])
   details     StockTransactionDetail[]
+  variants    ProductVariant[]
+
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  deletedAt       DateTime?
+  orderToProducts OrderToProduct[]
 
   @@map("products")
 }
@@ -106,6 +114,8 @@ enum UserType {
   admin
   client
   collaborator
+  coffeeSeller
+  coffeeAdmin
 }
 
 enum TransactionType {
@@ -131,15 +141,83 @@ model Card {
 }
 
 model MetaData {
-  id              Int    @id @default(autoincrement())
-  title       String
-  description String?
+  id              Int     @id @default(autoincrement())
+  title           String
+  description     String?
   backgroundImage String
   page            String
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  
 
   @@map("meta_data")
+}
+
+model Order {
+  id              Int              @id @default(autoincrement())
+  userId          String           @db.Uuid
+  user            User             @relation(fields: [userId], references: [id])
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  deletedAt       DateTime?
+  totalPrice      Decimal
+  orderToProducts OrderToProduct[]
+  tax             Decimal
+  voucherCode     String?
+  orderVouchers   OrderVoucher[]
+
+  @@map("orders")
+}
+
+model OrderToProduct {
+  id               String         @id @default(uuid()) @db.Uuid
+  orderId          Int            @db.Integer
+  productVariantId Int            @db.Integer
+  quantity         Int
+  price            Decimal
+  order            Order          @relation(fields: [orderId], references: [id])
+  productVariant   ProductVariant @relation(fields: [productVariantId], references: [id])
+  product          Product?       @relation(fields: [productId], references: [id])
+  productId        Int?
+
+  @@map("order_to_products")
+}
+
+model Voucher {
+  id          Int     @id @default(autoincrement())
+  code        String  @unique
+  amount      Decimal
+  description String?
+
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+  orders    OrderVoucher[]
+
+  @@map("vouchers")
+}
+
+model OrderVoucher {
+  id        Int @id @default(autoincrement())
+  orderId   Int
+  voucherId Int
+
+  order   Order   @relation(fields: [orderId], references: [id])
+  voucher Voucher @relation(fields: [voucherId], references: [id])
+
+  @@unique([orderId, voucherId])
+  @@map("order_vouchers")
+}
+
+model ProductVariant {
+  id        Int       @id @default(autoincrement())
+  productId Int
+  label     String    @default("size")
+  value     String
+  price     Decimal
+  deletedAt DateTime?
+
+  product         Product          @relation(fields: [productId], references: [id])
+  orderToProducts OrderToProduct[]
+
+  @@map("product_variants")
 }

@@ -3,6 +3,11 @@ import { JwtModule } from '@nestjs/jwt';
 import { PrismaModule } from './modules/prisma/prisma.module.js';
 import { UsersModule } from './modules/users/users.module.js';
 import { EmailsModule } from './modules/emails/emails.module.js';
+import { CloudinaryModule } from './modules/cloudinary/cloudinary.module.js';
+import { ProductsModule } from './modules/products/products.module.js';
+import { CategoriesModule } from './modules/categories/categories.module.js';
+import { OrdersModule } from './modules/orders/orders.module.js';
+import { UploadsModule } from './modules/uploads/uploads.module.js';
 import { AuthMiddleware } from './modules/users/middleware/auth.middleware.js';
 import {
   MiddlewareConsumer,
@@ -27,6 +32,11 @@ import { LandingpageModule } from './modules/landingpage/landingpage.module.js';
     UsersModule,
     MSTModule,
     LandingpageModule,
+    CloudinaryModule,
+    ProductsModule,
+    CategoriesModule,
+    OrdersModule,
+    UploadsModule,
   ],
   providers: [AuthMiddleware],
 })
