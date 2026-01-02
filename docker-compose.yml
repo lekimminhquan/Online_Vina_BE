@@ -10,8 +10,8 @@ services:
     environment:
       NODE_ENV: production
       PORT: 3000
-      # Provide this via .env or keep default; ensure DB exists/migrated
       DATABASE_URL: ${DATABASE_URL}
+      DIRECT_URL: ${DIRECT_URL}
       # Example JWT secret; override in .env
       JWT_SECRET: ${JWT_SECRET}
     ports:
