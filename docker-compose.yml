@@ -11,12 +11,10 @@ services:
       NODE_ENV: production
       PORT: 3000
       DATABASE_URL: ${DATABASE_URL}
-      DIRECT_URL: ${DIRECT_URL}
-      PRISMA_MIGRATE_DATABASE_URL: ${DIRECT_URL}
       JWT_SECRET: ${JWT_SECRET}
     ports:
       - '3000:3000'
-    command: ['sh', '-lc', 'DATABASE_URL="$DIRECT_URL" yarn prisma migrate deploy && node dist/main.js']
+    command: sh -lc "yarn prisma migrate deploy && node dist/main.js"
 
 volumes:
   pgdata: {}
