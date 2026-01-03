@@ -1,3 +1,5 @@
+version: '3.9'
+
 services:
   db:
     image: postgres:15
@@ -9,10 +11,15 @@ services:
       POSTGRES_PASSWORD: SkXbMhUsK5jeCLTi
     volumes:
       - ./pgdata:/var/lib/postgresql/data
-    ports:
-      - '5433:5432'
     networks:
       - appnet
+
+    # đảm bảo DB READY trước khi app chạy
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U annguyen -d online_vina']
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
   adminer:
     image: adminer
@@ -28,19 +35,33 @@ services:
   app:
     build:
       context: .
-      dockerfile: dockerfile
     container_name: device-app
     depends_on:
       db:
-        condition: service_started
+        condition: service_healthy
     environment:
       NODE_ENV: production
       PORT: 3000
       JWT_SECRET: ${JWT_SECRET}
+
+      # CHỈ dùng port 5432 vì chạy trong network docker
       DATABASE_URL: postgres://annguyen:SkXbMhUsK5jeCLTi@db:5432/online_vina?schema=public
+
     ports:
       - '3000:3000'
-    command: sh -lc "yarn prisma migrate deploy && node dist/main.js"
+
+    # chờ DB thật sự sẵn sàng rồi mới migrate
+    command: >
+      sh -lc "
+      until nc -z db 5432; do
+        echo '⏳ waiting for db...';
+      sleep 2;
+      done &&
+      echo '✅ DB is ready' &&
+      yarn prisma migrate deploy &&
+      node dist/main.js
+      "
+
     networks:
       - appnet
 
