@@ -8,9 +8,9 @@ services:
       POSTGRES_USER: annguyen
       POSTGRES_PASSWORD: SkXbMhUsK5jeCLTi
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - ./pgdata:/var/lib/postgresql/data
     ports:
-      - '5432:5432'
+      - '5433:5432'
     networks:
       - appnet
 
@@ -37,9 +37,7 @@ services:
       NODE_ENV: production
       PORT: 3000
       JWT_SECRET: ${JWT_SECRET}
-
-      # chú ý: tên DB phải khớp
-      DATABASE_URL: postgres://postgres:postgres@db:5432/online_vina?schema=public
+      DATABASE_URL: postgres://annguyen:SkXbMhUsK5jeCLTi@db:5432/online_vina?schema=public
     ports:
       - '3000:3000'
     command: sh -lc "yarn prisma migrate deploy && node dist/main.js"
