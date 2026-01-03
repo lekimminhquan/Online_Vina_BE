@@ -1,21 +1,53 @@
-version: '3.9'
-
 services:
+  db:
+    image: postgres:15
+    container_name: postgres-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: online_vina
+      POSTGRES_USER: annguyen
+      POSTGRES_PASSWORD: SkXbMhUsK5jeCLTi
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - '5432:5432'
+    networks:
+      - appnet
+
+  adminer:
+    image: adminer
+    container_name: db-adminer
+    restart: unless-stopped
+    depends_on:
+      - db
+    ports:
+      - '8080:8080'
+    networks:
+      - appnet
+
   app:
     build:
       context: .
       dockerfile: dockerfile
-    image: online-vina-backend
     container_name: device-app
+    depends_on:
+      db:
+        condition: service_started
     environment:
       NODE_ENV: production
       PORT: 3000
-      DATABASE_URL: ${DATABASE_URL}
       JWT_SECRET: ${JWT_SECRET}
+
+      # chú ý: tên DB phải khớp
+      DATABASE_URL: postgres://postgres:postgres@db:5432/online_vina?schema=public
     ports:
       - '3000:3000'
     command: sh -lc "yarn prisma migrate deploy && node dist/main.js"
+    networks:
+      - appnet
 
 volumes:
   pgdata: {}
 
+networks:
+  appnet: {}
