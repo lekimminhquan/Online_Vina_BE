@@ -11,6 +11,7 @@ services:
       POSTGRES_PASSWORD: SkXbMhUsK5jeCLTi
     volumes:
       - ./pgdata:/var/lib/postgresql/data
+    command: postgres -c listen_addresses='*'
     ports:
       - '5433:5432' # host 5433 → container 5432
     networks:
